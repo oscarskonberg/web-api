@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer - Order Car</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; }
+        input, select { width: 100%; padding: 8px; }
+        button { padding: 10px 15px; }
+        .result { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Order Car</h1>
+        <div class="form-group">
+            <label for="order-customer-id">Customer ID</label>
+            <input type="number" id="order-customer-id">
+        </div>
+        <div class="form-group">
+            <label for="order-car-id">Car ID</label>
+            <input type="number" id="order-car-id">
+        </div>
+        <button onclick="orderCar()">Order Car</button>
+        <div class="result" id="order-result"></div>
+    </div>
+    <script>
+        const apiUrl = 'http://127.0.0.1:5000';
+        async function orderCar() {
+            const customerId = document.getElementById('order-customer-id').value;
+            const carId = document.getElementById('order-car-id').value;
+            const response = await fetch(`${apiUrl}/order-car`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ customer_id: customerId, car_id: carId })
+            });
+            const result = await response.json();
+            if (response.ok) {
+                document.getElementById('order-result').innerText = "Order successful: " + JSON.stringify(result, null, 2);
+            } else {
+                document.getElementById('order-result').innerText = "Order failed: " + JSON.stringify(result, null, 2);
+            }
+        }
+    </script>
+</body>
+</html>
