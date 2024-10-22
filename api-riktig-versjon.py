@@ -88,6 +88,15 @@ def has_customer_booked_car(customer_id):
         )
         return result.single() is not None
 
+# Function to check if a customer has booked a specific car
+def check_booking(customer_id, car_id):
+    with driver.session() as session:
+        result = session.run(
+            "MATCH (c:Customer)-[:BOOKED]->(car:Car) WHERE ID(c) = $customer_id AND ID(car) = $car_id RETURN car",
+            customer_id=customer_id, car_id=car_id
+        )
+        return result.single() is not None
+
 # Function to book a car
 def book_car(customer_id, car_id):
     with driver.session() as session:
@@ -135,6 +144,21 @@ def return_car(customer_id, car_id, car_status):
         )
         return True, "Car returned successfully"
 
+# Function to rent a car
+def rent_car(customer_id, car_id):
+    with driver.session() as session:
+        # Check if the customer has booked the specific car
+        if not check_booking(customer_id, car_id):
+            return False, "Customer has not booked this car"
+        
+        # Change the car status to 'rented'
+        session.run(
+            "MATCH (c:Customer)-[:BOOKED]->(car:Car) WHERE ID(c) = $customer_id AND ID(car) = $car_id "
+            "SET car.status = 'rented'",
+            customer_id=customer_id, car_id=car_id
+        )
+        return True, "Car rented successfully"
+
 # Flask route to book a car
 @app.route('/book_car', methods=['POST'])
 def book_car_route():
@@ -155,6 +179,18 @@ def return_car_route():
     car_id = data['car_id']
     car_status = data['car_status']
     success, message = return_car(customer_id, car_id, car_status)
+    if success:
+        return jsonify({'message': message}), 200
+    else:
+        return jsonify({'message': message}), 400
+
+# Flask route to rent a car
+@app.route('/rent_car', methods=['POST'])
+def rent_car_route():
+    data = request.get_json()
+    customer_id = data['customer_id']
+    car_id = data['car_id']
+    success, message = rent_car(customer_id, car_id)
     if success:
         return jsonify({'message': message}), 200
     else:
