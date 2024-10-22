@@ -75,6 +75,51 @@ def get_cars_from_neo4j():
             })
         return cars
 
+# Function to check if a customer has booked a car
+def has_customer_booked_car(customer_id):
+    with driver.session() as session:
+        result = session.run(
+            "MATCH (c:Customer)-[:BOOKED]->(car:Car) WHERE ID(c) = $customer_id RETURN car",
+            customer_id=customer_id
+        )
+        return result.single() is not None
+
+# Function to book a car
+def book_car(customer_id, car_id):
+    with driver.session() as session:
+        # Check if the customer has already booked a car
+        if has_customer_booked_car(customer_id):
+            return False, "Customer has already booked a car"
+
+        # Check if the car is available
+        result = session.run(
+            "MATCH (car:Car) WHERE ID(car) = $car_id AND car.status = 'available' RETURN car",
+            car_id=car_id
+        )
+        car = result.single()
+        if not car:
+            return False, "Car is not available"
+
+        # Book the car
+        session.run(
+            "MATCH (c:Customer), (car:Car) WHERE ID(c) = $customer_id AND ID(car) = $car_id "
+            "CREATE (c)-[:BOOKED]->(car) SET car.status = 'booked'",
+            customer_id=customer_id, car_id=car_id
+        )
+        return True, "Car booked successfully"
+
+# Flask route to book a car
+@app.route('/book_car', methods=['POST'])
+def book_car_route():
+    data = request.get_json()
+    customer_id = data['customer_id']
+    car_id = data['car_id']
+    success, message = book_car(customer_id, car_id)
+    if success:
+        return jsonify({'message': message}), 200
+    else:
+        return jsonify({'message': message}), 400
+
 # Flask route to create a customer
 @app.route('/customers', methods=['POST'])
 def create_customer():
