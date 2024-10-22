@@ -157,3 +157,27 @@ def delete_employee(employee_id):
 # (local test)
 if __name__ == '__main__':
     app.run(debug=True)
+
+#Implement an endpoint ‘order-car’ where a customer-id, car-id is passed as parameters. 
+def create_order_relationship (customer_id, car_id):
+    with driver.session() as session:
+        session.run(
+            """
+            MATCH (cust:Customer), (car:Car)
+            WHERE ID(cust) = $customer_id AND ID(car) = $car_id
+            CREATE (cust) - [:ORDERED] ->(car)
+            """,
+            customer_id=customer_id, car_id=car_id
+        )
+
+#order car by customer ID and car ID
+@app.route('/order-car', methods=['POST'])
+def order_car():
+    data = request.get_json()
+    customer_id = data['customer_id']
+    car_id = data['car_id']
+
+    #call function to create order relationship
+    create_order_relationship(customer_id, car_id)
+
+    return jsonify({'message': f'Customer {customer_id} orderd Car {car_id} successfully'}), 201
