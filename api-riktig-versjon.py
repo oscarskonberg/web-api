@@ -10,6 +10,9 @@ password = "S6TD4YbelBzmDilMjShCUveiQihCHR_84YgrY4v7NVE"
 
 driver = GraphDatabase.driver(uri, auth=(username, password))
 
+# In-memory storage for employees
+employees = []
+
 # Function to create a customer
 def create_customer_in_neo4j(first_name, last_name, age, address):
     with driver.session() as session:
@@ -106,13 +109,20 @@ def get_cars():
     cars = get_cars_from_neo4j()
     return jsonify(cars)
 
-if __name__ == '__main__':
-    app.run(debug=True)
+# Flask route to get all employees
+@app.route('/employees', methods=['GET'])
+def get_employees():
+    return jsonify(employees)
 
-#employee - (MARLENE)
-#create (POST), read (GET), update (PUT) and delete (DELETE)
+# Flask route to get an employee by ID
+@app.route('/employees/<int:employee_id>', methods=['GET'])
+def get_employee(employee_id):
+    employee = next((emp for emp in employees if emp['employeeId'] == employee_id), None)
+    if employee:
+        return jsonify(employee)
+    return jsonify({'message': 'Employee not found'}), 404
 
-#opprett employee
+# Flask route to create an employee
 @app.route('/employees', methods=['POST'])
 def create_employee():
     data = request.get_json()
@@ -125,21 +135,8 @@ def create_employee():
     employees.append(employee)
     return jsonify(employee), 201
 
-#Henter employees
-@app.route('/employees', methods=['GET'])
-def get_employees():
-    return jsonify(employees)
-
-#Henter employee basert på ID
-@app.route('/employees/<int:employee_id>', methods=['GET'])
-def get_employee(employee_id):
-    employee = next((emp for emp in employee if emp['employeeId'] == employee_id), None)
-    if employee:
-        return jsonify(employee)
-    return jsonify({'message': 'Employee not found'}), 404  #error beskjed dersom employee ikke finnes/er lagt til
-
-#Oppdater employee basert på ID
-@app.route('/employeea/<int:employee_id>', methods=['PUT'])
+# Flask route to update an employee
+@app.route('/employees/<int:employee_id>', methods=['PUT'])
 def update_employee(employee_id):
     data = request.get_json()
     employee = next((emp for emp in employees if emp['employeeId'] == employee_id), None)
@@ -148,15 +145,15 @@ def update_employee(employee_id):
         employee['address'] = data.get('address', employee['address'])
         employee['branch'] = data.get('branch', employee['branch'])
         return jsonify(employee)
-    return jsonify({'message': 'Employee not found'}), 404  #error beskjed dersom employee ikke finnes/er lagt til
+    return jsonify({'message': 'Employee not found'}), 404
 
-#Slett employee basert på ID
+# Flask route to delete an employee
 @app.route('/employees/<int:employee_id>', methods=['DELETE'])
 def delete_employee(employee_id):
     global employees 
     employees = [emp for emp in employees if emp['employeeId'] != employee_id]
-    return jsonify ({'message': 'Employee delete'}), 204
+    return jsonify({'message': 'Employee deleted'}), 204
 
-#(local test) !!!!!!!!!!
-#if __name__ == '__main__':
-    #app.run(debug=True)
+# (local test)
+if __name__ == '__main__':
+    app.run(debug=True)
