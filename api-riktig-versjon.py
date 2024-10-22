@@ -108,3 +108,55 @@ def get_cars():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+#employee - (MARLENE)
+#create (POST), read (GET), update (PUT) and delete (DELETE)
+
+#opprett employee
+@app.route('/employees', methods=['POST'])
+def create_employee():
+    data = request.get_json()
+    employee = {
+        'employeeId': len(employees) + 1,
+        'name': data['name'],
+        'address': data['address'],
+        'branch': data['branch']
+    }
+    employees.append(employee)
+    return jsonify(employee), 201
+
+#Henter employees
+@app.route('/employees', methods=['GET'])
+def get_employees():
+    return jsonify(employees)
+
+#Henter employee basert på ID
+@app.route('/employees/<int:employee_id>', methods=['GET'])
+def get_employee(employee_id):
+    employee = next((emp for emp in employee if emp['employeeId'] == employee_id), None)
+    if employee:
+        return jsonify(employee)
+    return jsonify({'message': 'Employee not found'}), 404  #error beskjed dersom employee ikke finnes/er lagt til
+
+#Oppdater employee basert på ID
+@app.route('/employeea/<int:employee_id>', methods=['PUT'])
+def update_employee(employee_id):
+    data = request.get_json()
+    employee = next((emp for emp in employees if emp['employeeId'] == employee_id), None)
+    if employee:
+        employee['name'] = data.get('name', employee['name'])
+        employee['address'] = data.get('address', employee['address'])
+        employee['branch'] = data.get('branch', employee['branch'])
+        return jsonify(employee)
+    return jsonify({'message': 'Employee not found'}), 404  #error beskjed dersom employee ikke finnes/er lagt til
+
+#Slett employee basert på ID
+@app.route('/employees/<int:employee_id>', methods=['DELETE'])
+def delete_employee(employee_id):
+    global employees 
+    employees = [emp for emp in employees if emp['employeeId'] != employee_id]
+    return jsonify ({'message': 'Employee delete'}), 204
+
+#(local test) !!!!!!!!!!
+#if __name__ == '__main__':
+    #app.run(debug=True)
