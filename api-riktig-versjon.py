@@ -108,6 +108,29 @@ def book_car(customer_id, car_id):
         )
         return True, "Car booked successfully"
 
+# Function to return a car
+def return_car(customer_id, car_id, car_status):
+    with driver.session() as session:
+        # Check if the customer has booked the car
+        result = session.run(
+            "MATCH (c:Customer)-[:BOOKED]->(car:Car) WHERE ID(c) = $customer_id AND ID(car) = $car_id RETURN car",
+            customer_id=customer_id, car_id=car_id
+        )
+        car = result.single()
+        if not car:
+            return False, "Customer has not booked this car"
+
+        # Update the car status
+        session.run(
+            "MATCH (car:Car) WHERE ID(car) = $car_id "
+            "SET car.status = $car_status "
+            "WITH car "
+            "MATCH (c:Customer)-[r:BOOKED]->(car) WHERE ID(c) = $customer_id "
+            "DELETE r",
+            car_id=car_id, car_status=car_status, customer_id=customer_id
+        )
+        return True, "Car returned successfully"
+
 # Flask route to book a car
 @app.route('/book_car', methods=['POST'])
 def book_car_route():
@@ -115,6 +138,19 @@ def book_car_route():
     customer_id = data['customer_id']
     car_id = data['car_id']
     success, message = book_car(customer_id, car_id)
+    if success:
+        return jsonify({'message': message}), 200
+    else:
+        return jsonify({'message': message}), 400
+
+# Flask route to return a car
+@app.route('/return_car', methods=['POST'])
+def return_car_route():
+    data = request.get_json()
+    customer_id = data['customer_id']
+    car_id = data['car_id']
+    car_status = data['car_status']
+    success, message = return_car(customer_id, car_id, car_status)
     if success:
         return jsonify({'message': message}), 200
     else:
