@@ -3,16 +3,20 @@ from neo4j import GraphDatabase
 
 app = Flask(__name__)
 
-# Neo4j connection details
+# Neo4j connection details$
+# Muliggjør interaksjon med grafdatamodellen, 
+#samtidig som det sikrer at dataene er beskyttet og tilgjengelig for autoriserte brukere.
 uri = "neo4j+s://c1a528e1.databases.neo4j.io"
 username = "neo4j"
 password = "S6TD4YbelBzmDilMjShCUveiQihCHR_84YgrY4v7NVE"
 
+#driver brukes senere for å koble opp info til databasen
 driver = GraphDatabase.driver(uri, auth=(username, password))
 
 # In-memory storage for employees
 employees = []
 
+#CUSTUMER
 # Function to create a customer
 def create_customer_in_neo4j(first_name, last_name, age, address):
     with driver.session() as session:
@@ -50,7 +54,7 @@ def get_customer_by_last_name_from_neo4j(last_name):
                 "age": record["age"],
                 "address": record["address"]
             }
-        return None
+        return f"{last_name} not found"
 
 # Function to create a car
 def create_car_in_neo4j(make, model, year, location, status):
