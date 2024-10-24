@@ -20,14 +20,6 @@ def create_car(make, model, year, location, status):
             make=make, model=model, year=year, location=location, status=status
         )
 
-# Flask route - CREATE a car
-@app.route('/add_car', methods=['POST'])
-def add_car_route():
-    data = request.get_json()
-    create_car(data['make'], data['model'], data['year'], data['location'], data['status'])
-    return jsonify({'message': 'Car added successfully', 'car': data}), 201
-
-
 # GET all cars
 def get_cars():
     with driver.session() as session:
@@ -42,13 +34,6 @@ def get_cars():
                 "status": record["status"]
             })
         return cars
-
-# Flask route - GET all cars
-@app.route('/cars', methods=['GET'])
-def get_cars_route():
-    cars = get_cars()
-    return jsonify(cars)
-
 
 # UPDATE a car
 def update_car(car_id, make, model, year, location, status):
@@ -70,6 +55,24 @@ def update_car(car_id, make, model, year, location, status):
             }
         return None
 
+# DELETE car
+def delete_car(car_id):
+    with driver.session() as session:
+        session.run("MATCH (c:Car) WHERE ID(c) = $car_id DELETE c", car_id=car_id)
+
+# Flask route - CREATE a car
+@app.route('/add_car', methods=['POST'])
+def add_car_route():
+    data = request.get_json()
+    create_car(data['make'], data['model'], data['year'], data['location'], data['status'])
+    return jsonify({'message': 'Car added successfully', 'car': data}), 201
+
+# Flask route - GET all cars
+@app.route('/cars', methods=['GET'])
+def get_cars_route():
+    cars = get_cars()
+    return jsonify(cars)
+
 # Flask route - UPDATE a car
 @app.route('/cars/<int:car_id>', methods=['PUT'])
 def update_car_route(car_id):
@@ -78,11 +81,6 @@ def update_car_route(car_id):
     if car:
         return jsonify(car)
     return jsonify({'message': 'Car not found'}), 404
-
-# DELETE car
-def delete_car(car_id):
-    with driver.session() as session:
-        session.run("MATCH (c:Car) WHERE ID(c) = $car_id DELETE c", car_id=car_id)
 
 # Flask route - DELETE a car
 @app.route('/cars/<int:car_id>', methods=['DELETE'])
