@@ -56,6 +56,58 @@ def get_customer_by_last_name_from_neo4j(last_name):
             }
         return f"{last_name} not found"
 
+#update customer
+#by last name
+def update_customer_in_neo4j(last_name, first_name=None, age=None, address=None):
+    with driver.session() as session:
+        query = "MATCH (c:Customer {lastName: $lastName}) "
+        updates = []
+        if first_name:
+            updates.append("c.firstName = $firstName")
+        if age:
+            updates.append("c.age = $age")
+        if address:
+            updates.append("c.address = $address")
+        if updates:
+            query += "SET " + ", ".join(updates) + " RETURN c"
+            session.run(query, lastName=last_name, firstName=first_name, age=age, address=address)
+            return True
+        return False
+
+# Flask route 
+@app.route('/customers/<string:last_name>', methods=['PUT'])
+def update_customer(last_name):
+    data = request.get_json()
+    first_name = data.get('firstName')
+    age = data.get('age')
+    address = data.get('address')
+    success = update_customer_in_neo4j(last_name, first_name, age, address)
+    if success:
+        return jsonify({'message': 'Customer updated successfully'}), 200
+    else:
+        return jsonify({'message': 'No updates provided or customer not found'}), 400
+
+# Function to delete a customer by last name
+def delete_customer_in_neo4j(last_name):
+    with driver.session() as session:
+        result = session.run(
+            "MATCH (c:Customer {lastName: $lastName}) DETACH DELETE c", lastName=last_name
+        )
+        return result.consume().counters.nodes_deleted > 0
+
+#delete costumer
+# Flask route to delete a customer by last name
+@app.route('/customers/<string:last_name>', methods=['DELETE'])
+def delete_customer(last_name):
+    success = delete_customer_in_neo4j(last_name)
+    if success:
+        return jsonify({'message': 'Customer deleted successfully'}), 204
+    else:
+        return jsonify({'message': 'Customer not found'}), 404
+
+
+
+
 # Function to create a car
 def create_car_in_neo4j(make, model, year, location, status):
     with driver.session() as session:
