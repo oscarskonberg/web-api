@@ -28,7 +28,7 @@ def add_car_route():
     return jsonify({'message': 'Car added successfully', 'car': data}), 201
 
 
-# Function to get all cars
+# GET all cars
 def get_cars():
     with driver.session() as session:
         result = session.run("MATCH (c:Car) RETURN c.make AS make, c.model AS model, c.year AS year, c.location AS location, c.status AS status")
@@ -43,14 +43,53 @@ def get_cars():
             })
         return cars
 
-# Flask route - get all cars
+# Flask route - GET all cars
 @app.route('/cars', methods=['GET'])
 def get_cars_route():
     cars = get_cars()
     return jsonify(cars)
 
 
-#tror vi mangler en UPDATE og DELETE for car
+# UPDATE a car
+def update_car(car_id, make, model, year, location, status):
+    with driver.session() as session:
+        result = session.run(
+            "MATCH (c:Car) WHERE ID(c) = $car_id "
+            "SET c.make = $make, c.model = $model, c.year = $year, c.location = $location, c.status = $status "
+            "RETURN c.make AS make, c.model AS model, c.year AS year, c.location AS location, c.status AS status",
+            car_id=car_id, make=make, model=model, year=year, location=location, status=status
+        )
+        record = result.single()
+        if record:
+            return {
+                "make": record["make"],
+                "model": record["model"],
+                "year": record["year"],
+                "location": record["location"],
+                "status": record["status"]
+            }
+        return None
+
+# Flask route - UPDATE a car
+@app.route('/cars/<int:car_id>', methods=['PUT'])
+def update_car_route(car_id):
+    data = request.get_json()
+    car = update_car(car_id, data.get('make'), data.get('model'), data.get('year'), data.get('location'), data.get('status'))
+    if car:
+        return jsonify(car)
+    return jsonify({'message': 'Car not found'}), 404
+
+# DELETE car
+def delete_car(car_id):
+    with driver.session() as session:
+        session.run("MATCH (c:Car) WHERE ID(c) = $car_id DELETE c", car_id=car_id)
+
+# Flask route - DELETE a car
+@app.route('/cars/<int:car_id>', methods=['DELETE'])
+def delete_car_route(car_id):
+    delete_car(car_id)
+    return jsonify({'message': 'Car deleted successfully'}), 204
+
 
 # --------------------------CUSTOMER--------------------------
 # CREATE a customer
@@ -220,20 +259,95 @@ def delete_employee_route(employee_id):
 
 
 
-    # --------------------------Implement en endpoint-...--------------------------
-# 
+# --------------------------Endpoint 'order-car where a customer-id, car-is is passed as parameters--------------------------
+"""
+implement her
+"""
+# --------------------------The system must check the customer with custmer-id has booked other car, goes from "avalible to booked"--------------------------
+# Function to book a car
+def book_car(customer_id, car_id):
+    with driver.session() as session:
+        # Check if the customer has already booked a car
+        if has_customer_booked_car(customer_id):
+            return False, "Customer has already booked a car"
 
-# Flask route to book a car
-@app.route('/book_car', methods=['POST'])
-def book_car_route():
+        # Check if the car is available
+        result = session.run(
+            "MATCH (car:Car) WHERE ID(car) = $car_id AND car.status = 'available' RETURN car",
+            car_id=car_id
+        )
+        car = result.single()
+        if not car:
+            return False, "Car is not available"
+
+        # Book the car
+        session.run(
+            "MATCH (c:Customer), (car:Car) WHERE ID(c) = $customer_id AND ID(car) = $car_id "
+            "CREATE (c)-[:BOOKED]->(car) SET car.status = 'booked'",
+            customer_id=customer_id, car_id=car_id
+        )
+        return True, "Car booked successfully"
+
+#----------------------Endpoiys 'cancel-order-car..........-----------
+"""
+implement her
+"""
+
+# --------------------------rent-car  , booked to rented--------------------------
+
+
+# Function to rent a car
+def rent_car(customer_id, car_id):
+    with driver.session() as session:
+        # Check if the customer has booked the specific car
+        if not check_booking(customer_id, car_id):
+            return False, "Customer has not booked this car"
+        
+        # Change the car status to 'rented'
+        session.run(
+            "MATCH (c:Customer)-[:BOOKED]->(car:Car) WHERE ID(c) = $customer_id AND ID(car) = $car_id "
+            "SET car.status = 'rented'",
+            customer_id=customer_id, car_id=car_id
+        )
+        return True, "Car rented successfully"
+
+
+# Flask route to rent a car
+@app.route('/rent_car', methods=['POST'])
+def rent_car_route():
     data = request.get_json()
     customer_id = data['customer_id']
     car_id = data['car_id']
-    success, message = book_car(customer_id, car_id)
+    success, message = rent_car(customer_id, car_id)
     if success:
         return jsonify({'message': message}), 200
     else:
         return jsonify({'message': message}), 400
+
+
+# --------------------------return-car  , booked to rented--------------------------
+# Function to return a car
+def return_car(customer_id, car_id, car_status):
+    with driver.session() as session:
+        # Check if the customer has booked the car
+        result = session.run(
+            "MATCH (c:Customer)-[:BOOKED]->(car:Car) WHERE ID(c) = $customer_id AND ID(car) = $car_id RETURN car",
+            customer_id=customer_id, car_id=car_id
+        )
+        car = result.single()
+        if not car:
+            return False, "Customer has not booked this car"
+
+        # Update the car status
+        session.run(
+            "MATCH (car:Car) WHERE ID(car) = $car_id "
+            "SET car.status = $car_status "
+            "WITH car "
+            "MATCH (c:Customer)-[r:BOOKED]->(car) WHERE ID(c) = $customer_id "
+            "DELETE r",
+            car_id=car_id, car_status=car_status, customer_id=customer_id
+        )
+        return True, "Car returned successfully"
 
 # Flask route to return a car
 @app.route('/return_car', methods=['POST'])
@@ -243,6 +357,21 @@ def return_car_route():
     car_id = data['car_id']
     car_status = data['car_status']
     success, message = return_car(customer_id, car_id, car_status)
+    if success:
+        return jsonify({'message': message}), 200
+    else:
+        return jsonify({'message': message}), 400
+
+#---------------------------------End of the code---------------------------------
+
+
+# Flask route to book a car
+@app.route('/book_car', methods=['POST'])
+def book_car_route():
+    data = request.get_json()
+    customer_id = data['customer_id']
+    car_id = data['car_id']
+    success, message = book_car(customer_id, car_id)
     if success:
         return jsonify({'message': message}), 200
     else:
@@ -278,67 +407,9 @@ def check_booking(customer_id, car_id):
         )
         return result.single() is not None
 
-# Function to book a car
-def book_car(customer_id, car_id):
-    with driver.session() as session:
-        # Check if the customer has already booked a car
-        if has_customer_booked_car(customer_id):
-            return False, "Customer has already booked a car"
 
-        # Check if the car is available
-        result = session.run(
-            "MATCH (car:Car) WHERE ID(car) = $car_id AND car.status = 'available' RETURN car",
-            car_id=car_id
-        )
-        car = result.single()
-        if not car:
-            return False, "Car is not available"
 
-        # Book the car
-        session.run(
-            "MATCH (c:Customer), (car:Car) WHERE ID(c) = $customer_id AND ID(car) = $car_id "
-            "CREATE (c)-[:BOOKED]->(car) SET car.status = 'booked'",
-            customer_id=customer_id, car_id=car_id
-        )
-        return True, "Car booked successfully"
-
-# Function to return a car
-def return_car(customer_id, car_id, car_status):
-    with driver.session() as session:
-        # Check if the customer has booked the car
-        result = session.run(
-            "MATCH (c:Customer)-[:BOOKED]->(car:Car) WHERE ID(c) = $customer_id AND ID(car) = $car_id RETURN car",
-            customer_id=customer_id, car_id=car_id
-        )
-        car = result.single()
-        if not car:
-            return False, "Customer has not booked this car"
-
-        # Update the car status
-        session.run(
-            "MATCH (car:Car) WHERE ID(car) = $car_id "
-            "SET car.status = $car_status "
-            "WITH car "
-            "MATCH (c:Customer)-[r:BOOKED]->(car) WHERE ID(c) = $customer_id "
-            "DELETE r",
-            car_id=car_id, car_status=car_status, customer_id=customer_id
-        )
-        return True, "Car returned successfully"
-
-# Function to rent a car
-def rent_car(customer_id, car_id):
-    with driver.session() as session:
-        # Check if the customer has booked the specific car
-        if not check_booking(customer_id, car_id):
-            return False, "Customer has not booked this car"
-        
-        # Change the car status to 'rented'
-        session.run(
-            "MATCH (c:Customer)-[:BOOKED]->(car:Car) WHERE ID(c) = $customer_id AND ID(car) = $car_id "
-            "SET car.status = 'rented'",
-            customer_id=customer_id, car_id=car_id
-        )
-        return True, "Car rented successfully"
+# --------------------------Main--------------------------
 
 # (local test)
 if __name__ == '__main__':
