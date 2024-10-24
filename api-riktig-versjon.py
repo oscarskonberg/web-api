@@ -54,22 +54,16 @@ def get_cars_route():
 
 # --------------------------CUSTOMER--------------------------
 # CREATE a customer
-def create_customer(first_name, last_name, age, address):
+def create_customer_in_db(first_name, last_name, age, address):
     with driver.session() as session:
         session.run(
             "CREATE (c:Customer {firstName: $firstName, lastName: $lastName, age: $age, address: $address})",
             firstName=first_name, lastName=last_name, age=age, address=address
         )
 
-# Flask route - CREATE a customer
-@app.route('/customers', methods=['POST'])
-def create_customer_route():
-    data = request.get_json()
-    create_customer(data['FirstName'], data['LastName'], data['age'], data['address'])
-    return jsonify({'message': 'Customer created successfully'}), 201
 
-# Function to GET all customers
-def get_customers():
+# Function to get all customers from the database
+def get_customers_from_db():
     with driver.session() as session:
         result = session.run("MATCH (c:Customer) RETURN c.firstName AS firstName, c.lastName AS lastName, c.age AS age, c.address AS address")
         customers = []
@@ -82,14 +76,9 @@ def get_customers():
             })
         return customers
 
-# Flask route - GET all customers
-@app.route('/customers', methods=['GET'])
-def get_customers_route():
-    customers = get_customers()
-    return jsonify(customers)
 
-# GET a customer by last name
-def get_customer_by_last_name(last_name):
+# Function to get a customer by last name from the database
+def get_customer_by_last_name_from_db(last_name):
     with driver.session() as session:
         result = session.run(
             "MATCH (c:Customer {lastName: $lastName}) RETURN c.firstName AS firstName, c.lastName AS lastName, c.age AS age, c.address AS address", 
@@ -105,16 +94,68 @@ def get_customer_by_last_name(last_name):
             }
         return None
 
-# Flask route - GET a customer by last name
+
+# Function to update a customer in the database
+def update_customer_in_db(customer_id, first_name, last_name, age, address):
+    with driver.session() as session:
+        result = session.run(
+            "MATCH (c:Customer) WHERE ID(c) = $customer_id "
+            "SET c.firstName = $firstName, c.lastName = $lastName, c.age = $age, c.address = $address "
+            "RETURN c.firstName AS firstName, c.lastName AS lastName, c.age AS age, c.address AS address",
+            customer_id=customer_id, firstName=first_name, lastName=last_name, age=age, address=address
+        )
+        record = result.single()
+        if record:
+            return {
+                "firstName": record["firstName"],
+                "lastName": record["lastName"],
+                "age": record["age"],
+                "address": record["address"]
+            }
+        return None
+
+
+# Function to delete a customer from the database
+def delete_customer_from_db(customer_id):
+    with driver.session() as session:
+        session.run("MATCH (c:Customer) WHERE ID(c) = $customer_id DELETE c", customer_id=customer_id)
+
+# Flask route to create a customer
+@app.route('/customers', methods=['POST'])
+def create_customer():
+    data = request.get_json()
+    create_customer_in_db(data['FirstName'], data['LastName'], data['age'], data['address'])
+    return jsonify({'message': 'Customer created successfully'}), 201
+
+# Flask route to get all customers
+@app.route('/customers', methods=['GET'])
+def get_customers():
+    customers = get_customers_from_db()
+    return jsonify(customers)
+
+# Flask route to get a customer by last name
 @app.route('/customers/lastname/<string:last_name>', methods=['GET'])
-def get_customer_by_last_name_route(last_name):
-    customer = get_customer_by_last_name(last_name)
+def get_customer_by_last_name(last_name):
+    customer = get_customer_by_last_name_from_db(last_name)
+    if customer:
+        return jsonify(customer)
+    return jsonify({'message': 'Customer not found'}), 404
+
+# Flask route to update a customer
+@app.route('/customers/<int:customer_id>', methods=['PUT'])
+def update_customer(customer_id):
+    data = request.get_json()
+    customer = update_customer_in_db(customer_id, data.get('FirstName'), data.get('LastName'), data.get('age'), data.get('address'))
     if customer:
         return jsonify(customer)
     return jsonify({'message': 'Customer not found'}), 404
 
 
-#tror vi mangler en UPDATE og DELETE for customer
+# Flask route to delete a customer
+@app.route('/customers/<int:customer_id>', methods=['DELETE'])
+def delete_customer(customer_id):
+    delete_customer_from_db(customer_id)
+    return jsonify({'message': 'Customer deleted'}), 204
 
 
 # --------------------------EMPLOYEE--------------------------
