@@ -11,7 +11,7 @@ password = "S6TD4YbelBzmDilMjShCUveiQihCHR_84YgrY4v7NVE"
 # Driver for connecting to the database
 driver = GraphDatabase.driver(uri, auth=(username, password))
 
-# CUSTOMER
+# -----------------------CUSTOMER-------------------------------
 # Function to create a customer in the database
 def create_customer_in_db(first_name, last_name, age, address):
     with driver.session() as session:
@@ -111,7 +111,8 @@ def delete_customer(customer_id):
     delete_customer_from_db(customer_id)
     return jsonify({'message': 'Customer deleted'}), 204
 
-# CAR
+
+# -----------------------CAR-------------------------------
 # Function to create a car in the database
 def create_car_in_db(make, model, year, location, status):
     with driver.session() as session:
@@ -188,7 +189,8 @@ def delete_car(car_id):
     delete_car_from_db(car_id)
     return jsonify({'message': 'Car deleted'}), 204
 
-# EMPLOYEE
+
+# -----------------------EMPLOYEE-------------------------------
 # Function to create an employee in the database
 def create_employee_in_db(name, address, branch):
     with driver.session() as session:
