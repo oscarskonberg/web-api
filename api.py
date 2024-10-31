@@ -46,7 +46,8 @@ def get_customers_from_db():
 def get_customers():
     customers = get_customers_from_db()
     return jsonify(customers)
-
+    
+#----------------------OBS
 # Function to get a customer by last name from the database
 def get_customer_by_last_name_from_db(last_name):
     with driver.session() as session:
@@ -63,7 +64,7 @@ def get_customer_by_last_name_from_db(last_name):
                 "address": record["address"]
             }
         return None
-
+#----------------------OBS
 # Flask route to get a customer by last name
 @app.route('/customers/lastname/<string:last_name>', methods=['GET'])
 def get_customer_by_last_name(last_name):
