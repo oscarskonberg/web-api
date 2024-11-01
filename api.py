@@ -433,7 +433,7 @@ def return_car_route():
     else:
         return jsonify({'message': message}), 400
 
-# (local test)
+
 if __name__ == '__main__':
     app.run(debug=True)
 
