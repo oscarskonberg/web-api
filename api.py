@@ -24,7 +24,7 @@ def create_customer_in_db(first_name, last_name, age, address):
 @app.route('/customers', methods=['POST'])
 def create_customer():
     data = request.get_json()
-    create_customer_in_db(data['FirstName'], data['LastName'], data['age'], data['address'])
+    create_customer_in_db(data['firstName'], data['lastName'], data['age'], data['address'])
     return jsonify({'message': 'Customer created successfully'}), 201
 
 # Function to get all customers from the database
@@ -110,7 +110,7 @@ def delete_customer_from_db(customer_id):
 @app.route('/customers/<int:customer_id>', methods=['DELETE'])
 def delete_customer(customer_id):
     delete_customer_from_db(customer_id)
-    return jsonify({'message': 'Customer deleted'}), 204
+    return jsonify({'message': 'Customer deleted'}), 200
 
 
 # -----------------------CAR-------------------------------
@@ -286,7 +286,7 @@ def delete_employee_from_db(employee_id):
 @app.route('/employees/<int:employee_id>', methods=['DELETE'])
 def delete_employee(employee_id):
     delete_employee_from_db(employee_id)
-    return jsonify({'message': 'Employee deleted'}), 204
+    return jsonify({'message': 'Employee deleted'}), 200
 
 # Function to check if a customer has booked a car
 def has_customer_booked_car(customer_id):
@@ -330,17 +330,18 @@ def book_car(customer_id, car_id):
         )
         return True, "Car booked successfully"
 
-# Flask route to book a car
 @app.route('/order-car', methods=['POST'])
 def order_car():
     data = request.get_json()
-    customer_id = data['customer_id']
-    car_id = data['car_id']
+    customer_id = data.get('customer_id')
+    car_id = data.get('car_id')
+
+    if not all([customer_id, car_id]):
+        return jsonify({'message': 'customer_id and car_id are required'}), 400
+
     success, message = book_car(customer_id, car_id)
-    if success:
-        return jsonify({'message': message}), 200
-    else:
-        return jsonify({'message': message}), 400
+    status_code = 200 if success else 400
+    return jsonify({'message': message}), status_code
 
 # Function to cancel a car booking
 def cancel_order_car(customer_id, car_id):
@@ -435,3 +436,4 @@ def return_car_route():
 # (local test)
 if __name__ == '__main__':
     app.run(debug=True)
+
