@@ -207,7 +207,7 @@ def cancel_order():
     data = request.get_json()
     customer_id = data['customer_id']
     car_id = data['car_id']
-    success, message = cancel_order_car(customer_id, car_id)
+    success, message = cancel_order_in_db(customer_id, car_id)
     if success:
         return jsonify({'message': message}), 200
     else:
