@@ -4,9 +4,10 @@ from neo4j import GraphDatabase
 app = Flask(__name__)
 
 # -------------------------Neo4j--------------------------------
-uri = "neo4j+s://9568fa27.databases.neo4j.io"
-username = "neo4j"
-password = "kLStTek7OYFEyJfSL61y7y4vNAMHQoW6iLmBGeBEVdU"
+# Fjernet uri, username og password for sikkerhetsgrunner
+uri = ""
+username = ""
+password = ""
 
 driver = GraphDatabase.driver(uri, auth=(username, password))
 
